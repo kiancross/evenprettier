@@ -1,0 +1,67 @@
+{
+  "name": "evenprettier",
+  "version": "0.1.0",
+  "description": "Prettier and ESLint configs for spacious, easy-to-scan code",
+  "license": "MIT",
+  "author": "Kian Cross <kian@kiancross.co.uk>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kiancross/evenprettier.git"
+  },
+  "type": "module",
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24"
+  },
+  "main": "./dist/eslint.js",
+  "types": "./dist/eslint.d.ts",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/eslint.d.ts",
+      "default": "./dist/eslint.js"
+    },
+    "./prettier": {
+      "types": "./dist/prettier.d.ts",
+      "default": "./dist/prettier.js"
+    },
+    "./prettier-plugin": {
+      "types": "./dist/prettier-plugin.d.ts",
+      "default": "./dist/prettier-plugin.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "format": "npm run build && prettier --write . && eslint --fix .",
+    "format:check": "npm run build && prettier --check . && eslint .",
+    "prepublishOnly": "npm run build"
+  },
+  "prettier": "./dist/prettier.js",
+  "dependencies": {
+    "@eslint/js": "^10.0.1",
+    "@stylistic/eslint-plugin": "^5.10.0",
+    "@typescript-eslint/utils": "^8.72.1",
+    "eslint-plugin-perfectionist": "^5.13.0",
+    "typescript-eslint": "^8.72.1"
+  },
+  "peerDependencies": {
+    "eslint": "^10.0.0",
+    "prettier": ">=3"
+  },
+  "peerDependenciesMeta": {
+    "prettier": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "eslint": "^10.14.0",
+    "jiti": "^2.7.0",
+    "prettier": "^3.4.0",
+    "typescript": "^6.0.3",
+    "vitest": "^3.0.0"
+  }
+}
