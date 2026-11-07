@@ -24,6 +24,7 @@ const AST_FORMAT = "evenprettier-padded";
 interface PaddedDocNode {
   type: "PaddedDoc";
   doc: Doc;
+  textLength: number;
 }
 
 /*
@@ -170,6 +171,13 @@ function wrapParser(baseParser: Parser, parserName: string): Parser {
     ...baseParser,
     astFormat: AST_FORMAT,
 
+    /*
+     * The node covers the whole text. Prettier reads its start and end to keep
+     * the editor's cursor in place.
+     */
+    locStart: () => 0,
+    locEnd: (node: PaddedDocNode) => node.textLength,
+
     async parse(text, options) {
       const ast = (await baseParser.parse(text, options)) as AstNode;
 
@@ -187,6 +195,7 @@ function wrapParser(baseParser: Parser, parserName: string): Parser {
       return {
         type: "PaddedDoc",
         doc: removeMarkers(printed),
+        textLength: text.length,
       } satisfies PaddedDocNode;
     },
   };
