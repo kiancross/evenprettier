@@ -66,6 +66,11 @@ You can pass any of these options:
 - `ignores`: paths to ignore, in addition to `**/dist/**`,
   `**/node_modules/**`, and `**/coverage/**`.
 
+- `untypedFiles`: paths to lint without `typescript-eslint`'s type-checked
+  rules, such as files that are in no tsconfig, or files whose parser gives no
+  type information. The other rules, including the blank-line rules, still
+  apply to these files.
+
 For example:
 
 ```js
@@ -73,6 +78,7 @@ export default evenprettier({
   tsconfigRootDir: import.meta.dirname,
   internalPattern: ["^@myscope/.*"],
   ignores: ["examples/**"],
+  untypedFiles: ["scripts/**"],
 });
 ```
 
