@@ -1,6 +1,6 @@
 {
   "name": "evenprettier",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Prettier and ESLint configs for spacious, easy-to-scan code",
   "keywords": [
     "eslint",
