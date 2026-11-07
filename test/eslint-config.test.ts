@@ -15,18 +15,21 @@ const PADDING_RULE = "evenprettier/wrapped-object-property-padding";
 const OFF = 0;
 const ERROR = 2;
 
-async function severityOf(
-  ruleName: string,
-  fileName: string,
-  options: EvenprettierOptions = {},
-): Promise<unknown> {
-  const eslint = new ESLint({
+function eslintWith(options: EvenprettierOptions = {}): ESLint {
+  return new ESLint({
     overrideConfigFile: true,
 
     // The `typescript-eslint` config type differs from ESLint's own.
     overrideConfig: evenprettier(options) as unknown as Linter.Config[],
   });
+}
 
+async function severityOf(
+  ruleName: string,
+  fileName: string,
+  options: EvenprettierOptions = {},
+): Promise<unknown> {
+  const eslint = eslintWith(options);
   const config = (await eslint.calculateConfigForFile(fileName)) as Linter.Config;
 
   // ESLint gives each rule's setting here as an array, with the severity first.
@@ -52,5 +55,13 @@ describe("evenprettier", () => {
     );
 
     expect(await severityOf(PADDING_RULE, "scripts/build.ts", options)).toBe(ERROR);
+  });
+
+  it("defines Node's globals in JavaScript files", async () => {
+    const code = 'console.log(new URL(".", import.meta.url), process.env.HOME);\n';
+    const eslint = eslintWith();
+    const [result] = await eslint.lintText(code, { filePath: "astro.config.mjs" });
+
+    expect(result.messages).toEqual([]);
   });
 });

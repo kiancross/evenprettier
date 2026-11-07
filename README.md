@@ -170,8 +170,9 @@ The Prettier config sets `printWidth` to 86. The ESLint config reports lines
 longer than 86 columns, other than long strings, URLs, and regular
 expressions, since Prettier does not wrap comments. JavaScript files are
 linted without the type-checked rules, so `eslint.config.js` does not need to
-be in a tsconfig. In test files, which end in `.test.ts` or are in a `test`
-directory, non-null assertions such as `value!` are allowed.
+be in a tsconfig, and Node's globals, such as `process` and `URL`, are defined in
+them. In test files, which end in `.test.ts` or are in a `test` directory,
+non-null assertions such as `value!` are allowed.
 
 ## Rules
 

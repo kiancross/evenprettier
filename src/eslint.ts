@@ -10,6 +10,7 @@ import type { TSESLint } from "@typescript-eslint/utils";
 import js from "@eslint/js";
 import stylistic from "@stylistic/eslint-plugin";
 import perfectionist from "eslint-plugin-perfectionist";
+import globals from "globals";
 import tseslint from "typescript-eslint";
 
 import { plugin } from "./eslint-plugin.js";
@@ -20,6 +21,8 @@ export interface EvenprettierOptions {
   ignores?: string[];
   untypedFiles?: string[];
 }
+
+const JAVASCRIPT_FILES = ["**/*.js", "**/*.mjs", "**/*.cjs"];
 
 const padAround = (kind: string) => [
   { blankLine: "always", prev: kind, next: "*" },
@@ -168,8 +171,19 @@ export function evenprettier({
      * adds other files that the type-checked rules cannot run on.
      */
     {
-      files: ["**/*.js", "**/*.mjs", "**/*.cjs", ...untypedFiles],
+      files: [...JAVASCRIPT_FILES, ...untypedFiles],
       extends: [tseslint.configs.disableTypeChecked],
+    },
+    /*
+     * JavaScript files, such as `astro.config.mjs`, usually run in Node.
+     * Without its globals, `no-undef` reports names such as `process`.
+     */
+    {
+      files: JAVASCRIPT_FILES,
+
+      languageOptions: {
+        globals: globals.node,
+      },
     },
     {
       files: ["**/*.test.ts", "**/test/**/*.ts"],

@@ -53,6 +53,7 @@
     "@stylistic/eslint-plugin": "^5.10.0",
     "@typescript-eslint/utils": "^8.72.1",
     "eslint-plugin-perfectionist": "^5.13.0",
+    "globals": "^17.14.0",
     "typescript-eslint": "^8.72.1"
   },
   "peerDependencies": {
