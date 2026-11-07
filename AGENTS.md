@@ -68,6 +68,9 @@ Rules for anyone changing this package. For what it does, see the
   the comment itself, and do not refer to other documents, such as this one,
   or to other repositories.
 
+- Put comments on a function's interface above it, and comments on its
+  implementation inside it, next to the lines they explain.
+
 - Every change in the behaviour of a rule or the Prettier plugin comes with a
   test case. A case is a directory, named after what it checks, that holds an
   `input.js` or `input.ts` file and these optional files:

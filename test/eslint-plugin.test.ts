@@ -62,9 +62,14 @@ function errorsIn(
   }));
 }
 
-// Prettier picks the parser from the file name's extension.
 const formatWithPrettier = (code: string, fileName: string): Promise<string> =>
-  format(code, { ...prettierConfig, plugins: [prettierPlugin], filepath: fileName });
+  format(code, {
+    ...prettierConfig,
+    plugins: [prettierPlugin],
+
+    // Prettier picks the parser from the file name's extension.
+    filepath: fileName,
+  });
 
 function testFixture(ruleName: string, fixtureDir: string): void {
   const { inputFileName, inputCode, outputCode, hasOutputFile } =
