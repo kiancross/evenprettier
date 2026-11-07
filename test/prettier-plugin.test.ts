@@ -7,7 +7,7 @@
 
 import { join } from "node:path";
 
-import { format, type Options } from "prettier";
+import { format, formatWithCursor, type Options } from "prettier";
 import { describe, expect, it } from "vitest";
 
 import * as prettierPlugin from "../src/prettier-plugin.js";
@@ -51,4 +51,19 @@ describe("prettier-plugin", () => {
       testFixture(join(PLUGIN_DIR, fixtureName));
     });
   }
+
+  it("keeps the cursor in place", async () => {
+    const code = "if (a) { b(); } else { c(); }\n";
+
+    const { formatted, cursorOffset } = await formatWithCursor(code, {
+      parser: "babel",
+      plugins: [prettierPlugin],
+      cursorOffset: code.indexOf("c()"),
+    });
+
+    // Prettier can put the cursor in the indentation before `c();`.
+    const textAfterCursor = formatted.slice(cursorOffset).trimStart();
+
+    expect(textAfterCursor.startsWith("c();")).toBe(true);
+  });
 });
