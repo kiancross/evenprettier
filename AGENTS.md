@@ -41,6 +41,12 @@ Rules for anyone changing this package. For what it does, see the
   `internalPattern` is empty by default. Projects pass their own settings as
   options.
 
+- The Prettier plugin uses `__debug.printToDoc`, which Prettier leaves out of
+  its documentation and types, so the `prettier` peer range covers only the
+  major versions that CI has tested. When a Dependabot pull request moves
+  Prettier to a new major version and CI passes, widen the range in that pull
+  request.
+
 - Examples of formatted code in the README start with
   `<!-- prettier-ignore -->`. This repository runs Prettier with the plugin,
   which would otherwise change them.
@@ -70,10 +76,11 @@ Rules for anyone changing this package. For what it does, see the
 
 - Every change in the behaviour of a rule or the Prettier plugin comes with a
   test case. A case is a directory, named after what it checks, that holds an
-  `input.js` or `input.ts` file and these optional files:
+  `input.js` or `input.ts` file, or for a plugin case an `input.html` file, and
+  these optional files:
 
-  - `output.js` or `output.ts`: the code after `eslint --fix`, or after
-    Prettier. Leave it out if the code must not change.
+  - `output.js`, `output.ts`, or `output.html`: the code after `eslint --fix`,
+    or after Prettier. Leave it out if the code must not change.
 
   - `errors.json`: the errors that a rule reports in the input, with their
     line and message ID. Leave it out if there are none.
