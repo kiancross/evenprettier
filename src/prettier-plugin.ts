@@ -5,8 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import * as prettier from "prettier";
+
 import {
-  format,
+  doc,
+  type Doc,
   type Options,
   type Parser,
   type ParserOptions,
@@ -18,10 +21,22 @@ import * as typescriptPlugin from "prettier/plugins/typescript";
 
 const AST_FORMAT = "evenprettier-padded";
 
-interface FormattedTextNode {
-  type: "FormattedText";
-  body: string;
+interface PaddedDocNode {
+  type: "PaddedDoc";
+  doc: Doc;
 }
+
+/*
+ * `format` returns a string, and Prettier cannot indent the lines of a string
+ * when it embeds the code, such as in an HTML `<script>`. `printToDoc`
+ * returns a doc, which Prettier can indent. Prettier exports it in
+ * `__debug`, but leaves it out of its types.
+ */
+const { printToDoc } = (
+  prettier as unknown as {
+    __debug: { printToDoc: (text: string, options: Options) => Promise<Doc> };
+  }
+).__debug;
 
 /*
  * The babel and typescript parsers return different AST types, so the code
@@ -29,22 +44,19 @@ interface FormattedTextNode {
  */
 type AstNode = Record<string, unknown>;
 
-interface BlockStatement {
-  type: "BlockStatement";
-  loc: { end: { line: number } };
-}
-
 function isObject(value: unknown): value is AstNode {
   return typeof value === "object" && value !== null;
 }
 
-function isBlockStatement(node: unknown): node is BlockStatement {
+function isBlockStatement(node: unknown): node is AstNode {
   return isObject(node) && node.type === "BlockStatement";
 }
 
 /*
- * Returns the objects that `node` holds, directly or in an array. These are its
- * child nodes, plus objects such as its position, which hold no `if` or `try`.
+ * Returns every object that `node` holds, directly or in an array. These are
+ * its child nodes, and also objects that are not nodes, such as `loc`, which
+ * holds its position. The code that looks for `if` and `try` statements skips
+ * those, since they have no `type`.
  */
 function childrenOf(node: AstNode): AstNode[] {
   return Object.values(node)
@@ -61,7 +73,7 @@ function* nodesIn(node: AstNode): Generator<AstNode> {
 }
 
 // Returns the blocks of `node` that are followed by `else`, `catch`, or `finally`.
-function blocksFollowedByBranch(node: AstNode): BlockStatement[] {
+function blocksFollowedByBranch(node: AstNode): AstNode[] {
   const blocks: unknown[] = [];
 
   if (node.type === "IfStatement") {
@@ -86,50 +98,89 @@ function blocksFollowedByBranch(node: AstNode): BlockStatement[] {
 }
 
 /*
- * Returns the lines to add a blank line after. Prettier removes any blank line
- * before a `}`, so the line before it always holds the block's last code or
- * comment, or its `{`.
+ * Marks where evenprettier adds a blank line. Prettier keeps a line comment on
+ * its own line, so removing the comment from the doc leaves a blank line.
  */
-function collectPaddingLines(ast: AstNode): number[] {
-  return [...nodesIn(ast)]
-    .flatMap(blocksFollowedByBranch)
-    .map((block) => block.loc.end.line - 1);
+const MARKER_COMMENT = "// evenprettier-blank-line";
+
+/*
+ * The line break before the comment puts it on its own line, and the one after
+ * keeps the comment from swallowing the `}`.
+ */
+const MARKER_WITH_LINE_BREAKS = `\n${MARKER_COMMENT}\n`;
+
+const ascending = (a: number, b: number): number => a - b;
+
+// Returns the offset just after the last code or comment before `offset`.
+function contentEndBefore(text: string, offset: number): number {
+  return text.slice(0, offset).trimEnd().length;
 }
 
-function insertBlankLines(text: string, paddingLines: number[]): string {
-  const eol = text.includes("\r\n") ? "\r\n" : "\n";
-  const linesToPad = new Set(paddingLines);
+// Splits `text` at each of `offsets`, which must be in ascending order.
+function splitAt(text: string, offsets: number[]): string[] {
+  const pieces: string[] = [];
+  let pieceStart = 0;
 
-  return text
-    .split(eol)
-    .flatMap((line, index) => {
-      const lineNumber = index + 1;
+  for (const offset of offsets) {
+    pieces.push(text.slice(pieceStart, offset));
+    pieceStart = offset;
+  }
 
-      return linesToPad.has(lineNumber) ? [line, ""] : [line];
-    })
-    .join(eol);
+  pieces.push(text.slice(pieceStart));
+
+  return pieces;
 }
 
-async function addBlankLinesBeforeBranches(
-  formatted: string,
-  baseParser: Parser,
-): Promise<string> {
-  // Parsing for line numbers needs no options.
-  const ast = (await baseParser.parse(formatted, {} as ParserOptions)) as AstNode;
+// Puts a marker on its own line before each `}` at `closingBraceOffsets`.
+function insertMarkers(text: string, closingBraceOffsets: number[]): string {
+  /*
+   * Put each marker before any blank lines that come before the `}`. Prettier
+   * keeps a blank line before a comment, which would give two blank lines, but
+   * removes blank lines between the comment and the `}`.
+   */
+  const markerOffsets = closingBraceOffsets
+    .map((offset) => contentEndBefore(text, offset))
+    .sort(ascending);
 
-  return insertBlankLines(formatted, collectPaddingLines(ast));
+  return splitAt(text, markerOffsets).join(MARKER_WITH_LINE_BREAKS);
 }
 
-const isThisPlugin = (plugin: unknown): boolean =>
+function removeMarkersFrom(text: string): string {
+  /*
+   * Prettier formats a marker into a string of its own, which becomes a blank
+   * line once emptied. But Prettier does not format code under a
+   * `prettier-ignore` comment, so a marker there stays inside a longer string,
+   * exactly as inserted. In that case, strip exactly what was inserted: the
+   * marker with its line breaks.
+   */
+  return text === MARKER_COMMENT ? "" : text.replaceAll(MARKER_WITH_LINE_BREAKS, "");
+}
+
+function removeMarkers(printed: Doc): Doc {
+  return doc.utils.mapDoc(printed, (part) =>
+    typeof part === "string" ? removeMarkersFrom(part) : part,
+  );
+}
+
+const isEvenprettier = (plugin: unknown): boolean =>
   isObject(plugin) && plugin.isEvenprettierPlugin === true;
 
-function nestedFormatOptions(options: ParserOptions, parserName: string): Options {
+function optionsWithoutEvenprettier(
+  options: ParserOptions,
+  parserName: string,
+): Options {
+  // Leave out evenprettier, or its parser would recurse infinitely.
+  const otherPlugins = options.plugins.filter((plugin) => !isEvenprettier(plugin));
+
   return {
     ...options,
     parser: parserName,
+    plugins: otherPlugins,
 
-    // Leave out this plugin, or the nested format calls this parser forever.
-    plugins: options.plugins.filter((plugin) => !isThisPlugin(plugin)),
+    // The cursor and range offsets are for the text without markers.
+    cursorOffset: undefined,
+    rangeStart: undefined,
+    rangeEnd: undefined,
   };
 }
 
@@ -139,22 +190,33 @@ function wrapParser(baseParser: Parser, parserName: string): Parser {
     astFormat: AST_FORMAT,
 
     async parse(text, options) {
-      const formatted = await format(text, nestedFormatOptions(options, parserName));
+      const ast = (await baseParser.parse(text, options)) as AstNode;
 
-      return {
-        type: "FormattedText",
-        body: await addBlankLinesBeforeBranches(formatted, baseParser),
-      } satisfies FormattedTextNode;
+      const closingBraceOffsets = [...nodesIn(ast)]
+        .flatMap(blocksFollowedByBranch)
+        // A block ends just after its `}`.
+        .map((block) => baseParser.locEnd(block) - 1);
+
+      const markedText = insertMarkers(text, closingBraceOffsets);
+
+      const printed = await printToDoc(
+        markedText,
+        optionsWithoutEvenprettier(options, parserName),
+      );
+
+      const paddedDoc = removeMarkers(printed);
+
+      return { type: "PaddedDoc", doc: paddedDoc } satisfies PaddedDocNode;
     },
   };
 }
 
 /*
- * Prettier has no option to keep a blank line before a closing brace. So each
- * of these parsers formats the text with Prettier (without this plugin),
- * parses the result for its line numbers, and adds a blank line before each
- * `}` that is followed by `else`, `catch`, or `finally`. It returns the text
- * as one node, which the printer outputs unchanged.
+ * These wrap Prettier's `babel`, `babel-ts`, and `typescript` parsers, since
+ * Prettier has no option to keep a blank line before a closing brace. Each
+ * wrapper marks every `}` that is followed by `else`, `catch`, or `finally`,
+ * has Prettier print the marked text to a doc, and removes the markers. The
+ * printer outputs that doc unchanged.
  */
 export const parsers: Record<string, Parser> = {
   babel: wrapParser(babelPlugin.parsers.babel, "babel"),
@@ -162,11 +224,11 @@ export const parsers: Record<string, Parser> = {
   typescript: wrapParser(typescriptPlugin.parsers.typescript, "typescript"),
 };
 
-export const printers: Record<string, Printer<FormattedTextNode>> = {
+export const printers: Record<string, Printer<PaddedDocNode>> = {
   [AST_FORMAT]: {
-    print: (path) => path.node.body,
+    print: (path) => path.node.doc,
   },
 };
 
-// Lets `nestedFormatOptions` find this plugin in the list of plugins.
+// Lets `optionsWithoutEvenprettier` find evenprettier in the list of plugins.
 export const isEvenprettierPlugin = true;

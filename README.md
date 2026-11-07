@@ -161,9 +161,9 @@ and `} finally`. This is also why the scripts run Prettier first: ESLint's
 fixes then apply to code that Prettier has already formatted.
 
 The plugin works with Prettier's `babel`, `babel-ts`, and `typescript`
-parsers, so it pads JavaScript, TypeScript, and the frontmatter of Astro files
-formatted with `prettier-plugin-astro`. It does nothing when an editor formats
-only a selection. It is also exported on its own as
+parsers, so it pads JavaScript and TypeScript, including the code in HTML and
+Vue `<script>` tags, and in Astro files formatted with `prettier-plugin-astro`.
+It does nothing when an editor formats only a selection. It is also exported on its own as
 `evenprettier/prettier-plugin`.
 
 The Prettier config sets `printWidth` to 86. The ESLint config reports lines

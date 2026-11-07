@@ -25,20 +25,22 @@ export const directoriesIn = (parentDir: string): string[] =>
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name);
 
-function findJsOrTsFile(
+const CODE_FILE_EXTENSIONS = [".js", ".ts", ".html"];
+
+function findCodeFile(
   fixtureDir: string,
   nameWithoutExtension: string,
 ): string | undefined {
-  return [`${nameWithoutExtension}.js`, `${nameWithoutExtension}.ts`].find(
-    (fileName) => existsSync(join(fixtureDir, fileName)),
-  );
+  return CODE_FILE_EXTENSIONS.map(
+    (extension) => nameWithoutExtension + extension,
+  ).find((fileName) => existsSync(join(fixtureDir, fileName)));
 }
 
 export function readFixture(fixtureDir: string): Fixture {
-  const inputFileName = findJsOrTsFile(fixtureDir, "input");
-  const outputFileName = findJsOrTsFile(fixtureDir, "output");
+  const inputFileName = findCodeFile(fixtureDir, "input");
+  const outputFileName = findCodeFile(fixtureDir, "output");
 
-  if (!inputFileName) throw new Error(`${fixtureDir} has no input.js or input.ts`);
+  if (!inputFileName) throw new Error(`${fixtureDir} has no input file`);
 
   const inputCode = readFileSync(join(fixtureDir, inputFileName), "utf8");
 
