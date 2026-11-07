@@ -18,6 +18,7 @@ export interface EvenprettierOptions {
   tsconfigRootDir?: string;
   internalPattern?: string[];
   ignores?: string[];
+  untypedFiles?: string[];
 }
 
 const padAround = (kind: string) => [
@@ -29,6 +30,7 @@ export function evenprettier({
   tsconfigRootDir,
   internalPattern = [],
   ignores = [],
+  untypedFiles = [],
 }: EvenprettierOptions = {}): TSESLint.FlatConfig.ConfigArray {
   /*
    * `tseslint.config` is deprecated, but the types of ESLint's own
@@ -162,10 +164,11 @@ export function evenprettier({
     },
     /*
      * JavaScript files, such as `eslint.config.js`, are usually in no
-     * tsconfig, so the type-checked rules cannot run on them.
+     * tsconfig, so the type-checked rules cannot run on them. `untypedFiles`
+     * adds other files that the type-checked rules cannot run on.
      */
     {
-      files: ["**/*.js", "**/*.mjs", "**/*.cjs"],
+      files: ["**/*.js", "**/*.mjs", "**/*.cjs", ...untypedFiles],
       extends: [tseslint.configs.disableTypeChecked],
     },
     {

@@ -2,6 +2,14 @@
   "name": "evenprettier",
   "version": "0.1.1",
   "description": "Prettier and ESLint configs for spacious, easy-to-scan code",
+  "keywords": [
+    "eslint",
+    "eslintconfig",
+    "eslintplugin",
+    "prettier",
+    "prettier-plugin",
+    "formatting"
+  ],
   "license": "MIT",
   "author": "Kian Cross <kian@kiancross.co.uk>",
   "repository": {
@@ -49,7 +57,8 @@
   },
   "peerDependencies": {
     "eslint": "^10.0.0",
-    "prettier": ">=3"
+    "prettier": ">=3",
+    "typescript": ">=4.8.4"
   },
   "peerDependenciesMeta": {
     "prettier": {

@@ -17,6 +17,8 @@ Rules for anyone changing this package. For what it does, see the
   and `test/prettier-plugin.test.ts` run them. ESLint, Prettier, and `tsc` skip
   `test/fixtures/`, so that they do not change the cases.
 
+- `test/eslint-config.test.ts` tests the ESLint config factory.
+
 - `tsconfig.json` type-checks every TypeScript file outside `test/fixtures/`,
   and the editor and `typescript-eslint` use it. `tsconfig.build.json` builds
   `src/` into `dist/`, which is all that the published package contains.
